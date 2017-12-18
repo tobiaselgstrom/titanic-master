@@ -2,6 +2,7 @@ from sklearn.ensemble import RandomForestRegressor
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_auc_score
 import numpy as np
+import math
 
 import pandas as pd
 
@@ -83,13 +84,11 @@ def graph_feature_importance(model, feature_names, autoscale=True, headroom=0.05
 graph_feature_importance(model, X.columns, summarized_columns=categorical_variables)
 """
 
-
-
 feature_importances = pd.Series(model.feature_importances_, index=X.columns)
 feature_importances = feature_importances.sort_values()
 
-t = feature_importances.plot(kind="barh")
-plt.show(t)
+#t = feature_importances.plot(kind="barh")
+#plt.show(t)
 """
 
 results = []
@@ -111,7 +110,11 @@ results = []
 max_features_options = ["auto", None, "sqrt", "log2", 0.9, 0.2]
 
 for max_features in max_features_options:
-    model = RandomForestRegressor(n_estimators=1000, oob_score=True, n_jobs=-1, random_state=42, max_features=max_features)
+    model = RandomForestRegressor(n_estimators=1000,
+                                  oob_score=True,
+                                  n_jobs=-1,
+                                  random_state=42,
+                                  max_features=max_features)
     model.fit(X, y)
     print(max_features, "option.")
     roc = roc_auc_score(y, model.oob_prediction_)
@@ -134,11 +137,7 @@ model.fit(X, y)
 roc = roc_auc_score(y, model.oob_prediction_)
 print("Fully tuned RFR, min_sample_leaf=5 (C-Stat):", roc)
 
-y_oob = model.oob_prediction_
-
-print("\nBelow is the predicted results:\n")
-
-## This part is with Test Data - Fixing Order to be identical to test data
+# This part is with Test Data - Fixing Order to be identical to test data
 
 X = pd.read_csv("data/test.csv")
 X["Age"].fillna(X.Age.mean(), inplace=True)
@@ -146,6 +145,7 @@ X["Age"].fillna(X.Age.mean(), inplace=True)
 numeric_variables = list(X.dtypes[X.dtypes != "object"].index)
 
 X.drop(["Name", "Ticket", "PassengerId"], axis=1, inplace=True)
+
 
 def clean_cabin(x):
     try:
@@ -168,8 +168,12 @@ X.insert(15, 'Cabin_T', 0)
 X.insert(17, 'Embarked_Missing', 0)
 
 y_predicted = model.predict(X)
-print(y_predicted)
 
-y_predicted = pd.Series(y_predicted, np.linspace(892, 1309, 1309-892+1))
-t5 = y_predicted.plot(kind="barh")
-plt.show(t5)
+y_one_zero = pd.DataFrame(y_predicted)
+y_one_zero.insert(0, "PassengerId", np.linspace(892, 1309, 1309-892+1, dtype=int))
+y_one_zero = round(y_one_zero).astype(np.int64)
+y_one_zero.columns = ['PassengerId', 'Survived']
+y_one_zero.to_csv("data/submission.csv", index=False)
+
+#t5 = y_predicted.plot(kind="barh")
+#plt.show(t5)
